@@ -1,0 +1,270 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; created by : christian carter
+;
+; calculates to addition, subtraction, multiplication, division
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	.ORIG	x3000
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; run program till user enters 'q' or 'Q'
+; R0 = character
+; R1 = pointer to offset
+; R2 = offset
+; R3 = character flag for 'q/Q'
+; R4 = char count
+; R5 = pointer to statement
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+MAIN
+	JSR TITLE_DISPLAY
+	JSR INSTRUCTIONS_DISPLAY
+RUN_MAIN_AGAIN
+	JSR INIT
+ANOTHER_CHARACTER
+	JSR GET_CHAR
+
+	LEA R1, BACKSPACE_CHAR	; check for 'backspace'
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz HANDLE_BACKSPACE
+
+	LEA R1, q_CHAR		; check for 'q' and 'Q'
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz QUIT
+
+	LDR R2, R1, #1
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz QUIT
+
+	JSR PRINT_CHAR
+	JSR INPUT_CHAR
+	JSR INCR_POINTER
+	JSR INCR_CHAR_CNT
+	BR ANOTHER_CHARACTER
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R0 = addr of string
+; R1 = sustain return addr
+; R7 = return addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+TITLE_DISPLAY
+	AND R1, R1, #0
+	ADD R1, R7, #0
+	LEA R0, TITLE
+	TRAP x22
+	AND R7, R7, #0
+	ADD R7, R1, #0
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R0 = addr of string
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INSTRUCTIONS_DISPLAY
+	AND R1, R1, #0
+	ADD R1, R7, #0
+	LEA R0, INSTRUCTIONS	
+	TRAP x22
+	AND R7, R7, #0
+	ADD R7, R1, #0
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; initialize registers
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INIT
+	AND R0, R0, #0
+	AND R1, R1, #0
+	AND R2, R2, #0
+	AND R3, R3, #0
+	AND R4, R4, #0
+	AND R5, R5, #0
+	AND R6, R6, #0
+	LEA R5, STATEMENT
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; user-input character
+;
+; R0 = input character
+; R1 = sustain return memory addr
+; R7 = return memory addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+GET_CHAR
+	AND R1, R1, #0
+	ADD R1, R1, R7
+	TRAP x20
+	AND R7, R7, #0
+	ADD R7, R7, R1
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R5 = char pointer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INCR_POINTER
+	ADD R5, R5, #1
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R5 = char pointer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+DECR_POINTER
+	ADD R5, R5, #-1
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R4 = char count
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+HANDLE_BACKSPACE
+	ADD R4, R4, #0
+	BRz ANOTHER_CHARACTER
+	JSR DECR_POINTER
+	JSR DECR_CHAR_CNT
+	JSR POP_CHAR
+	AND R0, R0, #0		; new line
+	LD R0, NEW_LINE
+	TRAP x21
+	JSR PRINT_STRING
+	JSR ANOTHER_CHARACTER
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; user-input character
+;
+; R0 = input character
+; R1 = sustain return memory addr
+; R7 = return memory addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+DECR_CHAR_CNT
+	ADD R4, R4, #-1		; decrease input chars
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; display chars to screen
+;
+; R0 = character
+; R1 = sustain return memory addr
+; R2 = pointer
+; R7 = return memory addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_STRING
+	AND R1, R1, #0
+	ADD R1, R1, R7
+	AND R0, R0, #0
+	LEA R0, STATEMENT
+	TRAP x22
+	AND R7, R7, #0
+	ADD R7, R7, R1
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; R0 = character
+; R5 = pointer to statement
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INPUT_CHAR
+	STR R0, R5, #0
+	RET
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; display char to screen
+; 
+; R1 = sustain return memory addr
+; R7 = return memory addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+PRINT_CHAR
+	ST R7, MEM_ADDR_SAVE_1
+	TRAP x21
+	LD R7, MEM_ADDR_SAVE_1
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; increase character count
+; 
+; R4 = char count
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+INCR_CHAR_CNT
+	ADD R4, R4, #1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; pop char from statement
+; 
+; R0 = character
+; R5 = pointer to statement
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+POP_CHAR
+	
+	AND R0, R0, #0
+	STR R0, R5, #0
+	RET
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; user pressed 'q', resulting in program halt
+;
+; R0 = first char of addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+QUIT
+	LEA R0, QUIT_MSG
+	TRAP x22
+	HALT
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; fills, blocks, strings
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+QUIT_MSG	.STRINGZ	"\nYou quit the program.\n"
+
+ILLEGAL_INPUT_ADDR	.FILL ILLEGAL_INPUT
+MEM_ADDR_SAVE_1_ADDR	.FILL MEM_ADDR_SAVE_1
+STATEMENT_ADDR		.FILL STATEMENT
+CHAR_COUNT_ADDR		.FILL CHAR_COUNT
+
+STATEMENT	.BLKW 10
+
+CHAR_COUNT	.FILL		#10
+SPACE_CHAR	.FILL		#32
+ASCII_VAL	.FILL		#48
+
+MULT_CHAR_1	.FILL		#42
+MULT_CHAR_2	.FILL		#120
+ADD_CHAR	.FILL		#43
+SUB_CHAR	.FILL		#45
+DIV_CHAR	.FILL		#47
+
+ZERO_CHAR	.FILL		#41
+NINE_CHAR	.FILL		#57
+
+q_CHAR		.FILL		#113
+Q_CHAR		.FILL		#81
+
+BACKSPACE_CHAR	.FILL		#8
+
+EQUAL_CHAR	.FILL		#61
+
+NUM_10E4	.FILL		#10000
+NUM_10E3	.FILL		#1000
+NUM_10E2	.FILL		#100
+NUM_10E1	.FILL		#10
+NUM_10E0	.FILL		#1
+
+MEM_ADDR_SAVE_1	.BLKW		#1
+MEM_ADDR_SAVE_2	.BLKW		#1
+
+NEW_LINE	.STRINGZ	"\n"
+TITLE		.STRINGZ	"========== CALCULATOR ==========\n"
+INSTRUCTIONS	.STRINGZ	"\nLegal operations: + - * x /\nSingle-digit inputs only.\nExample: '6+8'\n\n"
+ILLEGAL_INPUT	.STRINGZ	"\nYou've input an illegal character.\n"
+OVERLOAD	.STRINGZ	"\nOutput exceeds 32-bit capacity."
+NO_INPUT	.STRINGZ	"\nNothing was entered.\n"
+DIV_BY_ZERO	.STRINGZ	"\nYou cannot divide by zero.\n"
+
+	.END
