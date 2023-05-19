@@ -1,55 +1,68 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; created by : christian carter
-; last update: may 18, 2023 
+; completion date: N/A
+; last update: may 19, 2023
 ;
 ; calculates addition, subtraction, multiplication, division
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 	.ORIG	x3000
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; run program till user enters 'q' or 'Q'
 ; R0 = character
 ; R1 = pointer to offset
 ; R2 = offset
-; R3 = character flag for 'q/Q'
 ; R4 = char count
 ; R5 = pointer to statement
+; R6 = max length of statement
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 MAIN
 	JSR TITLE_DISPLAY
 	JSR INSTRUCTIONS_DISPLAY
 RUN_MAIN_AGAIN
+	JSR NEWLINE_DISPLAY
+RUN_MAIN_AGAIN_WO_NEWLINE
 	JSR INIT
 ANOTHER_CHARACTER
-	JSR GET_CHAR
-
+	JSR GET_CHAR		; get character
 	LEA R1, BACKSPACE_CHAR	; check for 'backspace'
-	LDR R2, R1, #0
+	LDR R2, R1, #0	
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
 	BRz HANDLE_BACKSPACE
-
-	LEA R1, q_CHAR		; check for 'q' and 'Q'
+	LEA R1, q_CHAR		; check for 'q'
 	LDR R2, R1, #0
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
 	BRz QUIT
-
-	LDR R2, R1, #1
+	LDR R2, R1, #1		; check for 'Q'
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
 	BRz QUIT
-
+	LEA R1, ENTER_CHAR	; check for enter
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz READ_STATEMENT
+	AND R2, R2, #0		; checks for statement length
+	ADD R2, R2, #10
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R2, R4
+	BRz GET_CHAR
+	JSR INCR_CHAR_CNT	; next character
 	JSR PRINT_CHAR
 	JSR INPUT_CHAR
 	JSR INCR_POINTER
-	JSR INCR_CHAR_CNT
 	BR ANOTHER_CHARACTER
 
+BACKSPACE_CHAR	.FILL		#8
+q_CHAR		.FILL		#113
+Q_CHAR		.FILL		#81
+ENTER_CHAR	.FILL		#10
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; R0 = addr of string
 ; R1 = sustain return addr
@@ -64,8 +77,13 @@ TITLE_DISPLAY
 	ADD R7, R1, #0
 	RET
 
+TITLE		.STRINGZ	"========== CALCULATOR ==========\n"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; display instructions for program
+;
 ; R0 = addr of string
+; R1 = save return address
+; R7 = return address
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 INSTRUCTIONS_DISPLAY
 	AND R1, R1, #0
@@ -76,9 +94,28 @@ INSTRUCTIONS_DISPLAY
 	ADD R7, R1, #0
 	RET
 
+INSTRUCTIONS	.STRINGZ	"\nLegal operations: + - * x /\n"
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; print newline character
+;
+; R0 = addr of string
+; R1 = save return address
+; R7 = return address
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+NEWLINE_DISPLAY
+	AND R1, R1, #0
+	ADD R1, R7, #0
+	LEA R0, NEWLINE
+	TRAP x22
+	AND R7, R7, #0
+	ADD R7, R1, #0
+	RET
+
+NEWLINE		.STRINGZ	"\n"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; initialize registers
-;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 INIT
 	AND R0, R0, #0
@@ -88,9 +125,8 @@ INIT
 	AND R4, R4, #0
 	AND R5, R5, #0
 	AND R6, R6, #0
-	LEA R5, STATEMENT
+	LEA R5, STATEMENT	; init pos of statement memory
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; user-input character
 ;
@@ -112,14 +148,12 @@ GET_CHAR
 INCR_POINTER
 	ADD R5, R5, #1
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; R5 = char pointer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 DECR_POINTER
 	ADD R5, R5, #-1
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; R4 = char count
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -145,7 +179,6 @@ HANDLE_BACKSPACE
 DECR_CHAR_CNT
 	ADD R4, R4, #-1		; decrease input chars
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; display chars to screen
 ;
@@ -163,7 +196,6 @@ PRINT_STRING
 	AND R7, R7, #0
 	ADD R7, R7, R1
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; R0 = character
@@ -173,7 +205,6 @@ PRINT_STRING
 INPUT_CHAR
 	STR R0, R5, #0
 	RET
-	
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; display char to screen
 ; 
@@ -185,7 +216,6 @@ PRINT_CHAR
 	TRAP x21
 	LD R7, MEM_ADDR_SAVE_1
 	RET
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; increase character count
 ; 
@@ -193,20 +223,81 @@ PRINT_CHAR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 INCR_CHAR_CNT
 	ADD R4, R4, #1
-
+	RET
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; pop char from statement
 ; 
 ; R0 = character
 ; R5 = pointer to statement
-;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 POP_CHAR
-	
 	AND R0, R0, #0
 	STR R0, R5, #0
 	RET
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R0 = equal sign and new line
+; R1 = character
+; R2 = character offset
+; R3 = pointer to multi-digit numbers
+; R4 = character count
+; R5 = pointer to statement
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+READ_STATEMENT
+	ADD R4, R4, #0		; check if statement exists
+	BRz RUN_MAIN_AGAIN_WO_NEWLINE
 
+	LEA R0, EQUAL		; display equals
+	TRAP x22
+
+	LEA R5, STATEMENT	; set pointer to statement
+	LDR R1, R5, #0		; load init character
+	ADD R4, R4, #-1		; reduce chars to read
+	LD R2, SPACE_CHAR	; load space character
+	NOT R1, R1		; find if space
+	ADD R1, R1, #1
+	ADD R1, R1, R2
+	BRz SKIP_CHAR		; skip space
+	BRnp CHECK_IF_NUMBER
+SKIP_CHAR			; skip spaces
+	ADD R4, R4, #0		; check if statement exists
+	BRz RUN_MAIN_AGAIN
+	LDR R1, R5, #0		; load next character
+	ADD R4, R4, #-1		; reduce chars to read
+	NOT R1, R1		; find if space
+	ADD R1, R1, #1
+	ADD R1, R1, R2
+	BRz SKIP_CHAR
+CHECK_IF_NUMBER
+	LDR R1, R5, #0		; reload current character
+
+	LD  R2, ZERO_CHAR	; check if number
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R1, R2		
+	BRn ILLEGAL_NUMBER_PLACEMENT
+
+	LD  R2, NINE_CHAR
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R1, R2		
+	BRp ILLEGAL_NUMBER_PLACEMENT
+
+	ADD R4, R4, #0		; check if reached end of statement
+
+	BR RUN_MAIN_AGAIN
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; displays illegally place number error
+;
+; R0 = first char of addr
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+ILLEGAL_NUMBER_PLACEMENT
+	LEA R0, NUMBER_PLACEMENT
+	TRAP x22
+	BR RUN_MAIN_AGAIN
+
+NUMBER_PLACEMENT	.STRINGZ	"A number was illegally placed."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; user pressed 'q', resulting in program halt
 ;
@@ -216,11 +307,8 @@ QUIT
 	LEA R0, QUIT_MSG
 	TRAP x22
 	HALT
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
 ; fills, blocks, strings
-;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 QUIT_MSG	.STRINGZ	"\nYou quit the program.\n"
 
@@ -229,7 +317,7 @@ MEM_ADDR_SAVE_1_ADDR	.FILL MEM_ADDR_SAVE_1
 STATEMENT_ADDR		.FILL STATEMENT
 CHAR_COUNT_ADDR		.FILL CHAR_COUNT
 
-STATEMENT	.BLKW 10
+STATEMENT	.BLKW	10
 
 CHAR_COUNT	.FILL		#10
 SPACE_CHAR	.FILL		#32
@@ -244,11 +332,6 @@ DIV_CHAR	.FILL		#47
 ZERO_CHAR	.FILL		#41
 NINE_CHAR	.FILL		#57
 
-q_CHAR		.FILL		#113
-Q_CHAR		.FILL		#81
-
-BACKSPACE_CHAR	.FILL		#8
-
 EQUAL_CHAR	.FILL		#61
 
 NUM_10E4	.FILL		#10000
@@ -257,12 +340,18 @@ NUM_10E2	.FILL		#100
 NUM_10E1	.FILL		#10
 NUM_10E0	.FILL		#1
 
+N1	.BLKW	6
+N2	.BLKW	6
+N3	.BLKW	6
+N4	.BLKW	6
+N5	.BLKW	6
+
 MEM_ADDR_SAVE_1	.BLKW		#1
 MEM_ADDR_SAVE_2	.BLKW		#1
 
 NEW_LINE	.STRINGZ	"\n"
-TITLE		.STRINGZ	"========== CALCULATOR ==========\n"
-INSTRUCTIONS	.STRINGZ	"\nLegal operations: + - * x /\nSingle-digit inputs only.\nExample: '6+8'\n\n"
+EQUAL		.STRINGZ	" = "
+
 ILLEGAL_INPUT	.STRINGZ	"\nYou've input an illegal character.\n"
 OVERLOAD	.STRINGZ	"\nOutput exceeds 32-bit capacity."
 NO_INPUT	.STRINGZ	"\nNothing was entered.\n"
