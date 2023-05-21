@@ -127,6 +127,11 @@ NINE_CHAR	.FILL		#57
 
 SPACE_CHAR	.FILL		#32
 
+STATEMENT	.BLKW	10
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 NUM_OR_OP
 	TRAP x21
 	BR NEXT_CHAR
@@ -395,12 +400,6 @@ QUIT
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 QUIT_MSG	.STRINGZ	"You quit the program."
 
-ILLEGAL_INPUT_ADDR	.FILL ILLEGAL_INPUT
-MEM_ADDR_SAVE_1_ADDR	.FILL MEM_ADDR_SAVE_1
-STATEMENT_ADDR		.FILL STATEMENT
-CHAR_COUNT_ADDR		.FILL CHAR_COUNT
-
-STATEMENT	.BLKW	10
 
 CHAR_COUNT	.FILL		#10
 ASCII_VAL	.FILL		#48
