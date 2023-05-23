@@ -47,7 +47,7 @@ NEXT_CHAR
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz READ_STATEMENT
+	BRz READ_ST_E1
 	AND R2, R2, #0		; checks for statement length
 	ADD R2, R2, #10
 	NOT R2, R2
@@ -65,31 +65,31 @@ NEXT_CHAR
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz NUM_OR_OP
+	BRz HANDLE_OP
 	ADD R1, R1, #1		; check for character +
 	LDR R2, R1, #0
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz NUM_OR_OP
+	BRz HANDLE_OP
 	ADD R1, R1, #1		; check for character -
 	LDR R2, R1, #0
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz NUM_OR_OP
+	BRz HANDLE_OP
 	ADD R1, R1, #1		; check for character /
 	LDR R2, R1, #0
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz NUM_OR_OP
+	BRz HANDLE_OP
 	ADD R1, R1, #1		; check for character x
 	LDR R2, R1, #0
 	NOT R2, R2
 	ADD R2, R2, #1
 	ADD R2, R0, R2
-	BRz NUM_OR_OP
+	BRz HANDLE_OP
 	LEA R1, ZERO_CHAR	; check lower bound 0
 	LDR R2, R1, #0
 	NOT R2, R2
@@ -102,7 +102,7 @@ NEXT_CHAR
 	ADD R2, R2, #1
 	ADD R2, R0, R2
 	BRp NEXT_CHAR
-	BR STORE_AND_NEXT_CHAR
+	BR HANDLE_NUM
 
 STORE_AND_NEXT_CHAR
 	JSR INCR_CHAR_CNT	; next character
@@ -110,6 +110,24 @@ STORE_AND_NEXT_CHAR
 	JSR INPUT_CHAR
 	JSR INCR_POINTER
 	BR NEXT_CHAR
+
+HANDLE_NUM
+	ADD R3, R3, #0
+	BRz TOGGLE_TRUE_NUM_OP_BIT
+	JSR STORE_AND_NEXT_CHAR
+
+HANDLE_OP
+	ADD R3, R3, #0
+	BRz NEXT_CHAR
+	BRp TOGGLE_FALSE_NUM_OP_BIT
+
+TOGGLE_TRUE_NUM_OP_BIT
+	ADD R3, R3, #1
+	JSR STORE_AND_NEXT_CHAR
+
+TOGGLE_FALSE_NUM_OP_BIT
+	AND R3, R3, #0
+	JSR STORE_AND_NEXT_CHAR
 
 BACKSPACE_CHAR	.FILL		#8
 q_CHAR		.FILL		#113
@@ -129,12 +147,6 @@ SPACE_CHAR	.FILL		#32
 
 STATEMENT	.BLKW	10
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-NUM_OR_OP
-	TRAP x21
-	BR NEXT_CHAR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; R0 = addr of string
 ; R1 = sustain return addr
@@ -196,6 +208,12 @@ NEWLINE_DISPLAY
 	RET
 
 NEWLINE		.STRINGZ	"\n"
+
+;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;
+NEXT_CHAR_E1
+	BR NEXT_CHAR
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; initialize registers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -223,6 +241,16 @@ GET_CHAR
 	AND R7, R7, #0
 	ADD R7, R7, R1
 	RET
+;;;;;;;;;;;;;;;;;;;;;;
+; memory ext 1 of QUIT routine
+;;;;;;;;;;;;;;;;;;;;;;
+QUIT_MEM_EXT1
+	BR QUIT
+;;;;;;;;;;;;;;;;;;;;;;
+; extension 1 of read statement
+;;;;;;;;;;;;;;;;;;;;;;
+READ_ST_E1
+	BR READ_STATEMENT
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; R5 = char pointer
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -236,25 +264,95 @@ DECR_POINTER
 	ADD R5, R5, #-1
 	RET
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+NUM_OR_OP
+	TRAP x21
+	BR NEXT_CHAR
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+RUN_MAIN_AGAIN_WO_NEWLINE_E1
+	BR RUN_MAIN_AGAIN_WO_NEWLINE
+	
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; R0 = outline character
 ; R4 = char count
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 HANDLE_BACKSPACE
 	ADD R4, R4, #0
-	BRz NEXT_CHAR
+	BRz NEXT_CHAR		; do if no chars have been input
 	JSR DECR_POINTER
 	JSR DECR_CHAR_CNT
+	LDR R0, R5, #0		; load previous char
+	LEA R1, MULT_CHAR_1	; check for character *
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz FALSE_NUM_OP_BIT
+	ADD R1, R1, #1		; check for character +
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz FALSE_NUM_OP_BIT
+	ADD R1, R1, #1		; check for character -
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz FALSE_NUM_OP_BIT
+	ADD R1, R1, #1		; check for character /
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz FALSE_NUM_OP_BIT
+	ADD R1, R1, #1		; check for character x
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz FALSE_NUM_OP_BIT
+	LEA R1, SPACE_CHAR	; check for space char
+	LDR R2, R1, #0
+	NOT R2, R2
+	ADD R2, R2, #1
+	ADD R2, R0, R2
+	BRz NEUTRAL_NUM_OP_BIT
+	BR TRUE_NUM_OP_BIT
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+TRUE_NUM_OP_BIT
 	JSR POP_CHAR
-	AND R0, R0, #0		; new line
+	AND R3, R3, #0
+	ADD R3, R3, #1
 	LD R0, NEW_LINE
 	TRAP x21
 	JSR PRINT_STRING
-	BR NEXT_CHAR
-;;;;;;;;;;;;;;;;;;;;;;
-; memory ext 1 of QUIT routine
-;;;;;;;;;;;;;;;;;;;;;;
-QUIT_MEM_EXT1
-	BR QUIT
-
+	BR NEXT_CHAR_E1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+FALSE_NUM_OP_BIT
+	JSR POP_CHAR
+	AND R3, R3, #0
+	LD R0, NEW_LINE
+	TRAP x21
+	JSR PRINT_STRING
+	BR NEXT_CHAR_E1
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+NEUTRAL_NUM_OP_BIT
+	JSR POP_CHAR
+	LD R0, NEW_LINE
+	TRAP x21
+	JSR PRINT_STRING
+	BR NEXT_CHAR_E1
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; user-input character
 ;
@@ -291,6 +389,7 @@ PRINT_STRING
 INPUT_CHAR
 	STR R0, R5, #0
 	RET
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; display char to screen
 ; 
@@ -327,11 +426,11 @@ POP_CHAR
 ; R3 = pointer to multi-digit numbers
 ; R4 = character count
 ; R5 = pointer to statement
-;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 READ_STATEMENT
 	ADD R4, R4, #0		; check if statement exists
-	BRz RUN_MAIN_AGAIN_WO_NEWLINE
+	BRz RUN_MAIN_AGAIN_WO_NEWLINE_E1
 
 	LEA R0, EQUAL		; display equals
 	TRAP x22
@@ -399,7 +498,6 @@ QUIT
 ; fills, blocks, strings
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 QUIT_MSG	.STRINGZ	"You quit the program."
-
 
 CHAR_COUNT	.FILL		#10
 ASCII_VAL	.FILL		#48
